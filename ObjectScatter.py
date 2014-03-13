@@ -76,7 +76,7 @@ def getUVShells(name):
 
 def separateIntoPlanarElements(name):
     # Use the automatic UV tool to do the heavy lifting in breaking up the 3d mesh for us
-    cmds.polyAutoProjection('%s.f[0:%i]' % (name, cmds.polyEvaluate(name, f=True)), pb=False, ibd=1, sc=1 ,o=1, p=12, ws=0)
+    cmds.polyAutoProjection('%s.f[0:%i]' % (name, cmds.polyEvaluate(name, f=True)), o=1, p=12)
     shells = getUVShells(name)
     for shell in shells: cmds.polyChipOff(shell)
     elements = cmds.polySeparate( name )[:-1]
