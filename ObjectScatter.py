@@ -1,7 +1,8 @@
-#from pymel.core.runtime import PaintVertexColorTool, PaintVertexColorToolOptions
 import maya.cmds as cmds
 import random
 
+
+# UI
 winName = "Object Scatter"
 if(cmds.window(winName, exists=True)):
         cmds.deleteUI(winName)
@@ -52,8 +53,6 @@ def constrainToSurface(surface, objects):
         cmds.geometryConstraint( surface, obj )
         cmds.normalConstraint( surface, obj, aim=(0, 1, 0) )
 
-cmds.polyAutoProjection('pCube1.f[0:%i]'%cmds.polyEvaluate('pCube1', f=True), pb=False, ibd=1, sc=1 ,o=1, p=12, ws=0 )
-
 # Modified version of 'prolow's script from
 # http://tech-artists.org/forum/showthread.php?2596-Detecting-Overlapping-UV-Shells-in-Maya
 #
@@ -76,14 +75,13 @@ def getUVShells(name):
     return shells
 
 def separateIntoPlanarElements(name):
+    # Use the automatic UV tool to do the heavy lifting in breaking up the 3d mesh for us
     cmds.polyAutoProjection('%s.f[0:%i]' % (name, cmds.polyEvaluate(name, f=True)), pb=False, ibd=1, sc=1 ,o=1, p=12, ws=0)
     shells = getUVShells(name)
     for shell in shells: cmds.polyChipOff(shell)
     elements = cmds.polySeparate( name )[:-1]
     cmds.delete(elements[0])    # Delete the duplicate mesh
     return elements[1:]
-
-
 
 def initMesh(name):
         cmds.polyColorSet(name, colorSet="meshDensitySet_#", clamped=1, rpt='RGB')
