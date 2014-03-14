@@ -31,7 +31,7 @@ ObjectScatter.initMesh(meshName)
 
 cmds.PaintVertexColorToolOptions()
 
-layers = ObjectScatter.updateColourData(meshName)
+layers = ObjectScatter.parseMeshVertexColour(meshName, 0.1)
 
 sum=0
 for layer in layers: sum += len(layer)
@@ -47,11 +47,6 @@ in the center, we don't want ~200 objects squashed into that area
 - Possibly add back in the cumulative placement, at least then there is some interaction between each layer
 """
 
-
-accuracyStep = 0.1
-stepTotal = int(1/accuracyStep)
-
-
 ratios = [ (len(layer)/float(sum)) for layer in layers ]
 
 newsum = 0
@@ -60,33 +55,54 @@ for x in ratios: newsum += x
 objCount = 150
 density = [0] * stepTotal
 
+meshDuplicate = cmds.duplicate(meshName, rr=True)[0]
+
+layers = ObjectScatter.parseMeshVertexColour(meshName, 0.1)
+faceLayers = [ [] for x in range(len(layers)) ]
+# Convert to faces in here and remove duplicate selected faces from (lower weighted) layers
+for i, layer in enumerate(layers):
+    if layer:
+        faces = cmds.polyListComponentConversion(['%s.vtx[%i]'%(meshDuplicate,vtx) for vtx in layer], fv=True, tf=True, vfa=True)
+        faceID = []
+        for face in faces:
+            newID = face.split('[')[-1][:-1]
+            if ':' in newID:
+                # Unroll slice notation into individual indices
+                lowerID, upperID = newID.split(':')
+                faceID.extend( [x for x in range( int(lowerID), int(upperID))] )
+            else:
+                faceID.append(int(newID))
+        faceLayers[i] = faceID
+
+cmds.select(cmds.polyListComponentConversion(['%s.vtx[%i]'%(meshDuplicate,vtx) for vtx in layers[-1]], fv=True, tf=True, vfa=True))
+
 #randomly distribute meshes using ratios of density:amount
-for i in range(0, len(ratios)):
-	meshDuplicate = cmds.duplicate(meshName, rr=True)[0]
-	
-	density[i] = int(ratios[i] * objCount)
-	
-	if layers[i]:
-		# Break off the vertex colour islands into separate objects	
-		faceSelection = cmds.polyListComponentConversion(['%s.vtx[%i]'%(meshDuplicate,vtx) for vtx in layers[i]], fv=True, tf=True)
-	
-		if faceSelection:
-			cmds.polyChipOff(faceSelection, dup=True)
-	    	faceIslands = ObjectScatter.separateIntoPlanarElements(meshDuplicate)
-	    	
-	    	thisSet = cmds.sets(n='Ratio_%i'%i)
-	    	for face in faceIslands:
-	    		#cmds.geomToBBox(face, ko=True,shaderColor=[1,0.5,0.043],n="%s_bbox_%i_#"%(surface,i))
-	    		cmds.sets(cmds.geomToBBox(face, ko=True,shaderColor=[1,0.5,0.043],n="%s_bbox_%i_#"%(surface,i)), add=thisSet)
-	    			    		    	
-	    	# The last item is the name of the polySeparate node, this is not needed so we discard it
-	    	#separatedFaces = cmds.polySeparate( meshDuplicate )[:-1]
-	
-	    	#duplicatedObj, elements = separatedFaces[0], separatedFaces[1:]
-	    	#cmds.delete(duplicatedObj)
+for layer in layers:
+    #density[i] = int(ratios[i] * objCount)
+    if layer:
+        print layer
+        # Break off the vertex colour islands into separate objects
+        faceSelection = cmds.polyListComponentConversion(['%s.vtx[%i]'%(meshDuplicate,vtx) for vtx in layer], fv=True, tf=True, internal=True)
+        """ Edge case """
+        # If only a less than 4 vertices are selected, the internal flag will mean faceSelection selects nothing
+        # Could check if these vertices are involved with any other layer (internal causes problems if it's turned off)
+        if faceSelection:
+            cmds.select(faceSelection)
+            cmds.polyChipOff(faceSelection, dup=True)
 
+faceIslands = ObjectScatter.separateIntoPlanarElements(meshDuplicate)[1:]
 
- 	#cmds.delete(meshDuplicate)
+thisSet = cmds.sets(n='Ratio_%i'%i)
+for face in faceIslands:
+    #cmds.geomToBBox(face, ko=True,shaderColor=[1,0.5,0.043],n="%s_bbox_%i_#"%(surface,i))
+    cmds.sets(cmds.geomToBBox(face, ko=True,shaderColor=[1,0.5,0.043],n="%s_bbox_%i_#"%(face,i)), add=thisSet)
+
+# The last item is the name of the polySeparate node, this is not needed so we discard it
+#separatedFaces = cmds.polySeparate( meshDuplicate )[:-1]
+
+#duplicatedObj, elements = separatedFaces[0], separatedFaces[1:]
+#cmds.delete(duplicatedObj)
+cmds.delete(meshDuplicate)
 
 """
 accuracyStep = 0.1
@@ -111,25 +127,25 @@ if sum:
             cmds.select(deselect=True)
             density[i] = int(ratios[i] * objCount)
             if len(layers[i]) > 0:
-            	for vtx in layers[i]: cmds.select('%s.vtx[%i]'%(meshDuplicate,vtx), add=True)
-            	
-            	# Break off the vertex colour islands into separate objects
-            	faceSelection = cmds.polyListComponentConversion(fv=True, tf=True)
-            	cmds.polyChipOff(faceSelection, dup=True)
-            	
-            	# The last item is the name of the polySeparate node, this is not needed so we discard it
-            	separatedFaces = cmds.polySeparate( meshDuplicate )[:-1]
-            	duplicatedObj, elements = separatedFaces[0], separatedFaces[1:]
-            	#cmds.delete(duplicatedObj)
-            	
-            	for element in elements:
-            		faceIslands = ObjectScatter.separateIntoPlanarElements(element)
-            		#for island in faceIslands:
-            		#	surface = island
-            		#	bbox = cmds.geomToBBox(surface, ko=True,shaderColor=[1,0.5,0.043],n="%s_bbox_%i_#"%(surface,i))
-            		#	objects = ObjectScatter.volumeScatter(bbox, density[i])
-            		#	ObjectScatter.setPivotToBottom(objects)
-            		#	#cmds.delete(bbox)
-            		#	ObjectScatter.constrainToSurface(surface, objects)
-            		#	ObjectScatter.positionObjects(objects)
+                for vtx in layers[i]: cmds.select('%s.vtx[%i]'%(meshDuplicate,vtx), add=True)
+
+                # Break off the vertex colour islands into separate objects
+                faceSelection = cmds.polyListComponentConversion(fv=True, tf=True)
+                cmds.polyChipOff(faceSelection, dup=True)
+
+                # The last item is the name of the polySeparate node, this is not needed so we discard it
+                separatedFaces = cmds.polySeparate( meshDuplicate )[:-1]
+                duplicatedObj, elements = separatedFaces[0], separatedFaces[1:]
+                #cmds.delete(duplicatedObj)
+
+                for element in elements:
+                    faceIslands = ObjectScatter.separateIntoPlanarElements(element)
+                    #for island in faceIslands:
+                    #    surface = island
+                    #    bbox = cmds.geomToBBox(surface, ko=True,shaderColor=[1,0.5,0.043],n="%s_bbox_%i_#"%(surface,i))
+                    #    objects = ObjectScatter.volumeScatter(bbox, density[i])
+                    #    ObjectScatter.setPivotToBottom(objects)
+                    #    #cmds.delete(bbox)
+                    #    ObjectScatter.constrainToSurface(surface, objects)
+                    #    ObjectScatter.positionObjects(objects)
             cmds.delete(meshDuplicate)"""

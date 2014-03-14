@@ -70,22 +70,68 @@ def separateIntoPlanarElements(name):
     cmds.delete(elements[0])    # Delete the duplicate mesh
     return elements[1:]
 
+def separateByVertexBrightness(name, accuracy=0.1):
+    layers = parseMeshVertexColour(name, accuracy)
+    # Convert to faces in here and remove duplicate selected faces from (lower weighted) layers
+    faceLayers = [ [] for x in range(len(layers)) ]
+    for i, layer in enumerate(layers):
+        if layer:
+            faces = cmds.polyListComponentConversion(['%s.vtx[%i]'%(meshDuplicate,vtx) for vtx in layer], fv=True, tf=True, vfa=True)
+            faceID = []
+            for face in faces:
+                newID = face.split('[')[-1][:-1]
+                if ':' in newID:
+                    # Unroll slice notation into individual indices
+                    lowerID, upperID = newID.split(':')
+                    faceID.extend( [x for x in range( int(lowerID), int(upperID))] )
+                else:
+                    faceID.append(int(newID))
+            faceLayers[i] = faceID
+
+    # Fix this
+    usedIDs = []
+    for i, layer in reversed(list(enumerate(faceLayers))):
+        for face in layer:
+            print "%i : %i" % (i, face)
+            if face in usedIDs:
+                print "removing %s"%face
+                faceLayers[i].remove(face)
+            else:
+                print "adding %s"%face
+                usedIDs.append(face)
+
+
+
+cmds.select(cmds.polyListComponentConversion(['%s.vtx[%i]'%(meshDuplicate,vtx) for vtx in layers[-1]], fv=True, tf=True, vfa=True))
+
+for layer in layers:
+    if layer:
+        faceSelection = cmds.polyListComponentConversion(['%s.vtx[%i]'%(meshDuplicate,vtx) for vtx in layer], fv=True, tf=True, internal=True)
+        if faceSelection:
+            cmds.select(faceSelection)
+            cmds.polyChipOff(faceSelection, dup=True)
+
+faceIslands = ObjectScatter.separateIntoPlanarElements(meshDuplicate)[1:]
+
+
 def initMesh(name):
         cmds.polyColorSet(name, colorSet="meshDensitySet_#", clamped=1, rpt='RGB')
         cmds.polyColorPerVertex(name, r = 0.0, g = 0.0, b = 0.0)
 
-def updateColourData(name):
+
+def parseMeshVertexColour(name, accuracy):
+        # Clamp accuracy
+        if accuracy > 1.0: accuracy = 1.0
         itervtx = ['%s.vtx[%i]'%(name,i) for i in xrange(cmds.polyEvaluate(name, v=True)) ]
         vertCol = [cmds.polyColorPerVertex(v, query=True, rgb=True) for v in itervtx ]
 
-        accuracyStep = 0.1
-        stepTotal = int(1/accuracyStep)
+        stepTotal = int(1/accuracy)
         layers = [ [] for i in xrange(0, stepTotal) ]
 
         for vtx, col in enumerate(vertCol):
             for i in xrange(len(layers)):
-                minColour = [i*accuracyStep, i*accuracyStep, i*accuracyStep]
-                maxColour = [(i+1)*accuracyStep, (i+1)*accuracyStep, (i+1)*accuracyStep]
+                minColour = [i*accuracy, i*accuracy, i*accuracy]
+                maxColour = [(i+1)*accuracy, (i+1)*accuracy, (i+1)*accuracy]
                 if (minColour < col <= maxColour):
                         layers[i].append(vtx)
 
