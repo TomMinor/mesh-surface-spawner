@@ -63,16 +63,28 @@ faceLayers = [ [] for x in range(len(layers)) ]
 for i, layer in enumerate(layers):
     if layer:
         faces = cmds.polyListComponentConversion(['%s.vtx[%i]'%(meshDuplicate,vtx) for vtx in layer], fv=True, tf=True, vfa=True)
-        faceID = []
-        for face in faces:
-            newID = face.split('[')[-1][:-1]
-            if ':' in newID:
-                # Unroll slice notation into individual indices
-                lowerID, upperID = newID.split(':')
-                faceID.extend( [x for x in range( int(lowerID), int(upperID))] )
+        faceLayers[i] = cmds.ls(faces, fl=True)
+
+# Remove duplicate selected faces
+uniqueFaces = []
+for i in range(len(faceLayers)-1, 0, -1):
+    if faceLayers[i]:
+        for face in faceLayers[i]:
+            if face in uniqueFaces:
+                faceLayers[i].remove(face)
             else:
-                faceID.append(int(newID))
-        faceLayers[i] = faceID
+                uniqueFaces.append(face)
+
+for i in range(len(faceLayers)-1, 0, -1):
+    for j in range(i, 0, -1):
+        for face in faceLayers[j]:
+            if face in faceLayers[i]:
+                faceLayers[j].remove(face)
+
+
+cmds.select(u'pCube2.f[52]')
+cmds.select(faceLayers[3])
+cmds.select(faceLayers[-1])
 
 cmds.select(cmds.polyListComponentConversion(['%s.vtx[%i]'%(meshDuplicate,vtx) for vtx in layers[-1]], fv=True, tf=True, vfa=True))
 
