@@ -4,6 +4,25 @@ import random
 import ObjectScatter
 reload(ObjectScatter)
 
+
+import maya.cmds as cmds
+import random
+
+points = [ cmds.pointPosition('curve1.cv[%i]'%i) for i in range(cmds.getAttr('curve1.spans') + cmds.getAttr('curve1.degree')) ]
+tangent = [ cmds.pointOnCurve('curve1', pr=(1.0/23)*i, t=True) for i in range(23) ]
+
+for pos in points:
+	cmds.select(cmds.polyCone(r=0.2, h=0.2)[0])
+	cmds.move(pos[0], pos[1], pos[2])
+	cmds.select(['curve1', cmds.ls(sl=True)[0]]) 
+	cmds.tangentConstraint(aimVector=(0,1,0), upVector=(1,0,1), worldUpType="vector",worldUpVector=(0,1,0))
+
+
+new = cmds.polyCube()[0]
+cmds.rotate(0, random.uniform(0, 360), 0)
+cmds.move(random.uniform(0,8), 0, 0, os=True)
+
+
 # UI
 winName = "Object Scatter"
 if(cmds.window(winName, exists=True)):
