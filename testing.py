@@ -31,60 +31,20 @@ ObjectScatter.initMesh(meshName)
 
 cmds.PaintVertexColorToolOptions()
 
-layers = ObjectScatter.parseMeshVertexColour(meshName, 0.1)
+result = ObjectScatter.separateByVertexBrightness(meshName)
 
 sum=0
 for layer in layers: sum += len(layer)
 
-"""
-Density
-Divide the total objects between vtx colours and bbox
-
-- Compromise between bbox size and vertex colour, we want them to be clumped together
-more at brighter areas but spaced out in dimmer areas
-- But if the user sets a clump of vertices to ~0.9 and theres a set of vertices set to 1.0
-in the center, we don't want ~200 objects squashed into that area
-- Possibly add back in the cumulative placement, at least then there is some interaction between each layer
-"""
-
 ratios = [ (len(layer)/float(sum)) for layer in layers ]
+
+print ratios
 
 newsum = 0
 for x in ratios: newsum += x
 
 objCount = 150
 density = [0] * stepTotal
-
-meshDuplicate = cmds.duplicate(meshName, rr=True)[0]
-
-layers = ObjectScatter.parseMeshVertexColour(meshName, 0.1)
-faceLayers = [ [] for x in range(len(layers)) ]
-# Convert to faces in here and remove duplicate selected faces from (lower weighted) layers
-for i, layer in enumerate(layers):
-    if layer:
-        faces = cmds.polyListComponentConversion(['%s.vtx[%i]'%(meshDuplicate,vtx) for vtx in layer], fv=True, tf=True, vfa=True)
-        faceLayers[i] = cmds.ls(faces, fl=True)
-
-# Remove duplicate selected faces
-uniqueFaces = []
-for i in range(len(faceLayers)-1, 0, -1):
-    if faceLayers[i]:
-        for face in faceLayers[i]:
-            if face in uniqueFaces:
-                faceLayers[i].remove(face)
-            else:
-                uniqueFaces.append(face)
-
-for i in range(len(faceLayers)-1, 0, -1):
-    for j in range(i, 0, -1):
-        for face in faceLayers[j]:
-            if face in faceLayers[i]:
-                faceLayers[j].remove(face)
-
-
-cmds.select(u'pCube2.f[52]')
-cmds.select(faceLayers[3])
-cmds.select(faceLayers[-1])
 
 cmds.select(cmds.polyListComponentConversion(['%s.vtx[%i]'%(meshDuplicate,vtx) for vtx in layers[-1]], fv=True, tf=True, vfa=True))
 
