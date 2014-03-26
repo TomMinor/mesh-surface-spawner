@@ -3,6 +3,31 @@ import random
 
 accuracy = 0.1
 
+import random
+
+cmds.PencilCurveTool()
+while(cmds.currentCtx() == 'pencilContext'): cmds.refresh()
+print "Finished"
+
+cmds.ls(type="nurbsCurve")
+
+def spawnInCircle(nurbsName, num):
+	radius = cmds.getAttr('%s.radius'%cmds.listConnections(cmds.listRelatives(nurbsName))[0])
+	position = cmds.xform(nurbsName, q=True, t=True)
+	rotation = cmds.xform(nurbsName, q=True, ro=True)
+	for obj in xrange(num):
+		cmds.polyCone()
+		cmds.xform(t=position)
+		cmds.xform(ro=rotation)
+		cmds.rotate(0, random.uniform(0,360), 0, os=True, r=True)
+		cmds.move(	random.uniform(0, radius),0, 0, os=True, r=True)
+		
+	
+spawnInCircle('nurbsCircle1', 30)
+
+
+
+
 def setPivotToBottom(objects, bottomAxis='y'):
     bottomAxis = bottomAxis.lower()
     offetAxis  = [False, False, False]
