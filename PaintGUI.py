@@ -39,7 +39,7 @@ cmds.menuItem('toggleCreateNurbsPrimitivesAsToolItem', edit=True, enable=True)
 # Turn on interactive creation for nurbs objects 
 # and remember its current value so it can be reverted later
 if(!cmds.optionVar(q='createNurbsPrimitiveAsTool')):
-	
+	cmds.optionVar(intValue=('createNurbsPrimitiveAsTool', 1))
 
 
 
