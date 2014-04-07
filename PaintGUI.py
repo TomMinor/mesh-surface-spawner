@@ -1,15 +1,23 @@
 import maya.cmds as cmds
 
+# Parse a curve
+for i in range(1,100):
+	cmds.spaceLocator(p=cmds.pointOnCurve(newCurve, pr=1.0/100.0 * i, top=True, p=True ))
+	cmds.xform(cp=True)
+	cmds.xform(ro=cmds.pointOnCurve(newCurve, pr=1.0/100.0 * i, top=True, t=True))
+
 #ToFix : Tweak scriptjob to be killed in different scenarios (onScene etc)
 class MeshPaintGUI:
 	def __init__(self):
 		self.curvePaths = []
 		self.squareBounds = []
 		self.radialBounds = []
-		# Initialize object creation job ID to invalid value
+		# Initialize object creation job to invalid job ID so 
+		# an actual job ID is not accidently killed 
 		exists=self.newObjectJob = -1
 
 	def newItemJob(self):
+		# Reset the object creation handling job 
 		if(cmds.scriptJob(exists=self.newObjectJob)):
 			cmds.scriptJob(kill=self.newObjectJob)
 		self.newObjectJob = cmds.scriptJob(event=('DagObjectCreated', self.onNewObject))
