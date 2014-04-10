@@ -1,0 +1,73 @@
+
+import maya.cmds as cmds
+
+def addInstancesToSet(setName, objects):
+	if not (cmds.ls(setName)):
+		cmds.sets(n=setName)
+	return cmds.sets(objects, add=setName)
+	
+
+def placeObjectsAlongCurve(curve, objects, totalInstances, distribution=(random.gauss, 1, 1)):
+		"""
+		Places objects along a curve with random divations from their starting position
+		
+		curve			:	The curve object whose shape will be used to determine object placement
+		objects			:	A list of 2-tuples in the form [objectName, frequency], where objectName is the 
+							scene name of an object and frequency is a normalised (0.0-1.0) value to determine
+							the ratio of how many instances of this object will spawn in relation to totalInstances
+		totalInstances	:	The maximum amount of instances to spawn
+		distribution	:	A list containing a name of the random distribution function to use when offsetting objects
+							randomly, and the parameters to pass. E.g
+							
+							distribution = (random.gauss, 2, 1)
+							distribution = (random.choice, 2, 12.5, 70, 3.4)
+		"""
+		freqSum = sum(object[1] for object in objects)							
+		freqScalar = totalInstances/freqSum	
+		frequencyTable = [ int(object[1]*freqScalar) for object in objects ]
+		
+		randFunc, params = distribution[0], distribution[1:]
+		
+		objectSets = []
+		for i, object in enumerate(objects):
+			stepSize = 1.0/frequencyTable[i]
+			steps = int(1/stepSize)
+			
+			setName = '%s_%s_instances'%(curve, object[0])
+			objectSets.append(setName)
+			for j in range(steps):
+				step = stepSize*float(j)
+				pos = cmds.pointOnCurve(curve, pr=step, top=True)
+					
+				instanceObj = cmds.instance(object[0])[0]
+				cmds.xform(instanceObj, t=pos)
+								
+				addInstancesToSet(setName, [instanceObj])
+				setPivotToBottom([instanceObj])
+				
+				cmds.move( randFunc(*params), 0, randFunc(*params), instanceObj, r=True )
+		return objectSets
+
+
+def constrainToSurface(surface, objects):
+        for obj in objects:
+                cmds.geometryConstraint( surface, obj )
+                cmds.normalConstraint( surface, obj, aim=(0, 1, 0) )			
+			
+def setPivotToBottom(objects, bottomAxis='y'):
+        bottomAxis = bottomAxis.lower()
+        offetAxis  = [False, False, False]
+       
+        if   bottomAxis == 'x': axis = 0
+        elif bottomAxis == 'y': axis = 1
+        elif bottomAxis == 'z': axis = 2
+        else:  
+                print "Invalid axis %s" % bottomAxis
+                return
+               
+        offetAxis[axis] = True
+       
+        for name in objects:
+                offset = cmds.exactWorldBoundingBox(name)[axis]
+                pivotName = ['%s.scalePivot'%name, '%s.rotatePivot'%name]
+                cmds.move(offset, pivotName, x=offetAxis[0], y=offetAxis[1], z=offetAxis[2])

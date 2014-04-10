@@ -24,9 +24,9 @@
 import maya.cmds as cmds
 
 # Storing attributes
-removeSettings('curve1')
-storeToolSettings( 'curve1', 'PencilCurve1_pCube0_instances')
-a = getSettings('curve1')
+#removeSettings('curve1')
+#storeToolSettings( 'curve1', 'PencilCurve1_pCube0_instances')
+#a = getSettings('curve1')
 
 #TODO : Add more error checking to getSettings
 
@@ -168,7 +168,7 @@ class storeToolSettings:
         else:
             cmds.addAttr(self.name, ln ='distMax', dv = maximum, hidden=True)
 
-
+"""
 # Instance specific data (transforms added to random rotations provided by tool settings)
 instanceSet = 'PencilCurve1_pCube0_instances'
 
@@ -225,6 +225,7 @@ queryAttributes('cubes', ['meshPaint_Scale', 'meshPaint_Rotation', 'meshPaint_Of
 
 addStringArrayAttr('pPlane1', 'meshPaint_Tools', ['curve1'])
 queryAttributes('pPlane1', ['meshPaint_Tools'])
+"""
 
 def queryAttributes(nodeName, attributeList, skipMissingAttr=False):
     """
